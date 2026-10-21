@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fafaf9">
+  <title>Familiar — private AI chat</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div><div class="brand-name">familiar</div><div class="brand-caption">private intelligence</div></div>
+        <button class="icon-button sidebar-close" id="close-sidebar" aria-label="Close menu">×</button>
+      </div>
+      <button class="new-chat" id="new-chat"><span class="plus">＋</span> New chat <kbd>⌘ K</kbd></button>
+      <div class="section-label">RECENTS</div>
+      <nav class="chat-list" id="chat-list" aria-label="Recent chats"></nav>
+      <div class="sidebar-bottom">
+        <div class="privacy-card"><div class="privacy-icon">◈</div><div><strong>Your data stays yours</strong><p>Replies are generated on this Mac. Chat history stays in your browser.</p></div></div>
+        <div class="profile"><div class="avatar">◉</div><div class="profile-copy"><strong>My Mac</strong><span>Apple Foundation Models</span></div><span class="online-dot" id="status-dot"></span></div>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <button class="icon-button menu-button" id="open-sidebar" aria-label="Open menu">☰</button>
+        <div class="model-pill"><span class="model-dot" id="model-dot"></span><span id="model-label">Checking model…</span><span class="chevron">⌄</span></div>
+        <div class="top-actions"><button class="icon-button theme-toggle" id="theme-toggle" title="Switch to dark theme" aria-label="Switch to dark theme"><span class="theme-icon" aria-hidden="true">☾</span></button><button class="icon-button" id="clear-chat" title="Clear this chat" aria-label="Clear this chat">↻</button><div class="top-avatar">◉</div></div>
+      </header>
+
+      <section class="conversation" id="conversation">
+        <div class="welcome" id="welcome">
+          <div class="welcome-orb"><span></span><span></span><span></span><span></span></div>
+          <p class="eyebrow">APPLE FOUNDATION MODELS</p>
+          <h1>Hello<span class="wave">✳</span></h1>
+          <p class="welcome-subtitle">What shall we think about?</p>
+          <div class="suggestions">
+            <button class="suggestion" data-prompt="Help me plan a calm and productive morning"><span class="suggestion-icon lavender">✧</span><span><strong>Plan my morning</strong><small>Start the day with ease</small></span><span class="suggestion-arrow">↗</span></button>
+            <button class="suggestion" data-prompt="Explain how machine learning works in simple terms"><span class="suggestion-icon peach">⌘</span><span><strong>Learn something new</strong><small>Make a complex topic simple</small></span><span class="suggestion-arrow">↗</span></button>
+            <button class="suggestion" data-prompt="Suggest an unusual but simple dinner recipe using ingredients people usually have at home"><span class="suggestion-icon mint">◇</span><span><strong>Find inspiration</strong><small>Ideas for dinner tonight</small></span><span class="suggestion-arrow">↗</span></button>
+            <button class="suggestion" data-prompt="Help me rewrite this message to sound warmer and friendlier: "><span class="suggestion-icon blue">↗</span><span><strong>Find the right words</strong><small>Write with more warmth and clarity</small></span><span class="suggestion-arrow">↗</span></button>
+          </div>
+          <p class="local-note"><span class="lock">▣</span> Runs on your device · Your messages stay out of the cloud</p>
+        </div>
+        <div class="messages" id="messages"></div>
+      </section>
+
+      <div class="composer-wrap">
+        <form class="composer" id="composer">
+          <textarea id="message-input" rows="1" placeholder="Ask anything…" aria-label="Your message"></textarea>
+          <div class="composer-bottom"><span class="composer-hint"><span class="sparkle">✳</span> Apple on-device model</span><button class="send-button" id="send-button" type="submit" aria-label="Send message" disabled><span>↑</span></button></div>
+        </form>
+        <p class="disclaimer">Replies are generated on your device and may contain mistakes.</p>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+</body>
+</html>
