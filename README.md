@@ -4,7 +4,7 @@ A lightweight chat interface for Apple's on-device Foundation Models. Familiar r
 
 | Light | Dark |
 | --- | --- |
-| ![Familiar Local in light mode](screenshots/light.png) | ![Familiar Local in dark mode](screenshots/dark.png) |
+| ![Familiar Local in light mode](screenshots/light.jpg) | ![Familiar Local in dark mode](screenshots/dark.jpg) |
 
 ## What it does
 
