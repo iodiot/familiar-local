@@ -59,5 +59,16 @@
     </main>
   </div>
   <div class="toast" id="toast" role="status"></div>
+  <div class="delete-dialog" id="delete-dialog" hidden>
+    <section class="delete-dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="delete-dialog-heading" aria-describedby="delete-dialog-copy">
+      <h2 id="delete-dialog-heading">Delete chat?</h2>
+      <p id="delete-chat-title"></p>
+      <p id="delete-dialog-copy">This chat and its saved messages will be removed from this browser. This cannot be undone.</p>
+      <div class="delete-dialog-actions">
+        <button type="button" class="dialog-cancel" id="cancel-delete">Cancel</button>
+        <button type="button" class="dialog-confirm" id="confirm-delete">Delete chat</button>
+      </div>
+    </section>
+  </div>
 </body>
 </html>

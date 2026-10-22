@@ -7,10 +7,13 @@ const messagesEl = $('#messages');
 const welcome = $('#welcome');
 const input = $('#message-input');
 const sendButton = $('#send-button');
+const deleteDialog = $('#delete-dialog');
 let chats = loadChats();
 let currentId = localStorage.getItem(CURRENT_KEY);
 let pending = false;
 let toastTimer;
+let pendingDeleteId = null;
+let deleteTrigger = null;
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -34,14 +37,122 @@ function currentChat() { return chats.find((chat) => chat.id === currentId); }
 function escapeHTML(value) {
   return value.replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
 }
+function safeLink(destination) {
+  try {
+    const url = new URL(destination, location.origin);
+    return ['http:', 'https:', 'mailto:'].includes(url.protocol) ? url.href : null;
+  } catch { return null; }
+}
+function renderInlineMarkdown(value) {
+  const preserved = [];
+  const hold = (html) => {
+    const marker = `\u0000${preserved.length}\u0000`;
+    preserved.push(html);
+    return marker;
+  };
+  let source = value.replace(/`([^`\n]+)`/g, (_, code) => hold(`<code>${escapeHTML(code)}</code>`));
+  source = source.replace(/!?\[([^\]]+)\]\(([^\s)]+)(?:\s+"([^"]*)")?\)/g, (match, label, destination, title) => {
+    if (match.startsWith('!')) return hold(escapeHTML(match));
+    const href = safeLink(destination);
+    if (!href) return hold(escapeHTML(label));
+    const titleAttr = title ? ` title="${escapeHTML(title)}"` : '';
+    return hold(`<a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer"${titleAttr}>${escapeHTML(label)}</a>`);
+  });
+  source = escapeHTML(source)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.+?)__/g, '<strong>$1</strong>')
+    .replace(/~~(.+?)~~/g, '<del>$1</del>')
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')
+    .replace(/(^|[^_])_([^_\n]+)_(?!_)/g, '$1<em>$2</em>');
+  return source.replace(/\u0000(\d+)\u0000/g, (_, index) => preserved[Number(index)] ?? '');
+}
+function renderMarkdown(value) {
+  const lines = value.replace(/\r/g, '').split('\n');
+  const blocks = [];
+  let i = 0;
+  const isBlockStart = (line) => /^ {0,3}(?:#{1,6}\s|```|>|(?:[-*+]\s|\d+\.\s)|(?:---+|\*\*\*+|___+)$)/.test(line);
+  const tableCells = (line) => line.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map((cell) => cell.replace(/\\\|/g, '|').trim());
+  const isTableDelimiter = (line) => /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+
+  while (i < lines.length) {
+    if (!lines[i].trim()) { i++; continue; }
+    const fence = lines[i].match(/^ {0,3}```\s*([\w+-]*)\s*$/);
+    if (fence) {
+      i++;
+      const code = [];
+      while (i < lines.length && !/^ {0,3}```\s*$/.test(lines[i])) code.push(lines[i++]);
+      if (i < lines.length) i++;
+      const language = fence[1] ? ` class="language-${escapeHTML(fence[1])}"` : '';
+      blocks.push(`<pre><code${language}>${escapeHTML(code.join('\n'))}</code></pre>`);
+      continue;
+    }
+    const heading = lines[i].match(/^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (heading) {
+      const level = heading[1].length;
+      blocks.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+      i++;
+      continue;
+    }
+    if (/^ {0,3}(?:---+|\*\*\*+|___+)\s*$/.test(lines[i])) {
+      blocks.push('<hr>');
+      i++;
+      continue;
+    }
+    if (i + 1 < lines.length && lines[i].includes('|') && isTableDelimiter(lines[i + 1])) {
+      const header = tableCells(lines[i]);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim()) rows.push(tableCells(lines[i++]));
+      const headerHTML = header.map((cell) => `<th>${renderInlineMarkdown(cell)}</th>`).join('');
+      const bodyHTML = rows.map((row) => `<tr>${header.map((_, index) => `<td>${renderInlineMarkdown(row[index] ?? '')}</td>`).join('')}</tr>`).join('');
+      blocks.push(`<div class="table-scroll"><table><thead><tr>${headerHTML}</tr></thead><tbody>${bodyHTML}</tbody></table></div>`);
+      continue;
+    }
+    if (/^ {0,3}>/.test(lines[i])) {
+      const quote = [];
+      while (i < lines.length && /^ {0,3}>/.test(lines[i])) quote.push(lines[i++].replace(/^ {0,3}> ?/, ''));
+      blocks.push(`<blockquote><p>${renderInlineMarkdown(quote.join('\n')).replace(/\n/g, '<br>')}</p></blockquote>`);
+      continue;
+    }
+    const listStart = lines[i].match(/^ {0,3}([-*+]|\d+\.)\s+(.+)$/);
+    if (listStart) {
+      const ordered = /^\d/.test(listStart[1]);
+      const tag = ordered ? 'ol' : 'ul';
+      const items = [];
+      while (i < lines.length) {
+        const item = lines[i].match(/^ {0,3}([-*+]|\d+\.)\s+(.+)$/);
+        if (!item || /^\d/.test(item[1]) !== ordered) break;
+        items.push(`<li>${renderInlineMarkdown(item[2])}</li>`);
+        i++;
+      }
+      blocks.push(`<${tag}>${items.join('')}</${tag}>`);
+      continue;
+    }
+    const paragraph = [lines[i++]];
+    while (i < lines.length && lines[i].trim() && !isBlockStart(lines[i])) paragraph.push(lines[i++]);
+    blocks.push(`<p>${renderInlineMarkdown(paragraph.join('\n')).replace(/\n/g, '<br>')}</p>`);
+  }
+  return blocks.join('');
+}
 function renderList() {
   list.innerHTML = '';
   chats.forEach((chat) => {
-    const button = document.createElement('button');
-    button.className = `chat-item${chat.id === currentId ? ' active' : ''}`;
-    button.innerHTML = `<span class="chat-item-icon">◌</span><span class="chat-item-title">${escapeHTML(chat.title)}</span>`;
-    button.addEventListener('click', () => selectChat(chat.id));
-    list.append(button);
+    const row = document.createElement('div');
+    row.className = `chat-item${chat.id === currentId ? ' active' : ''}`;
+    const select = document.createElement('button');
+    select.type = 'button';
+    select.className = 'chat-item-select';
+    select.innerHTML = `<span class="chat-item-icon" aria-hidden="true">◌</span><span class="chat-item-title">${escapeHTML(chat.title)}</span>`;
+    select.addEventListener('click', () => selectChat(chat.id));
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'chat-delete';
+    remove.setAttribute('aria-label', `Delete chat: ${chat.title}`);
+    remove.title = 'Delete chat';
+    remove.textContent = '×';
+    remove.addEventListener('click', () => requestDeleteChat(chat.id, remove));
+    row.append(select, remove);
+    list.append(row);
   });
 }
 function renderMessages() {
@@ -50,7 +161,7 @@ function renderMessages() {
   welcome.hidden = messages.length > 0;
   messagesEl.innerHTML = messages.map((message) => {
     const isUser = message.role === 'user';
-    return `<article class="message ${isUser ? 'user' : 'assistant'}">${isUser ? '' : '<div class="message-avatar">✳</div>'}<div class="bubble">${escapeHTML(message.text).replace(/\n/g, '<br>')}</div>${isUser ? '<div class="message-avatar user-mark">◉</div>' : ''}</article>`;
+    return `<article class="message ${isUser ? 'user' : 'assistant'}">${isUser ? '' : '<div class="message-avatar">✳</div>'}<div class="bubble">${renderMarkdown(message.text)}</div>${isUser ? '<div class="message-avatar user-mark">◉</div>' : ''}</article>`;
   }).join('');
   scrollBottom();
 }
@@ -61,6 +172,44 @@ function newChat() {
   save(); renderList(); renderMessages(); input.focus(); $('#sidebar').classList.remove('open');
 }
 function selectChat(id) { currentId = id; save(); renderList(); renderMessages(); $('#sidebar').classList.remove('open'); }
+function requestDeleteChat(id, trigger) {
+  const chat = chats.find((item) => item.id === id);
+  if (!chat) return;
+  pendingDeleteId = id;
+  deleteTrigger = trigger;
+  $('#delete-chat-title').textContent = `Delete “${chat.title}”?`;
+  deleteDialog.hidden = false;
+  $('#cancel-delete').focus();
+}
+function closeDeleteDialog() {
+  pendingDeleteId = null;
+  deleteDialog.hidden = true;
+  deleteTrigger?.focus();
+  deleteTrigger = null;
+}
+function deleteChat(id) {
+  chats = chats.filter((item) => item.id !== id);
+  if (currentId === id) {
+    currentId = chats[0]?.id ?? null;
+    if (!currentId) {
+      currentId = crypto.randomUUID();
+      chats.push({ id: currentId, title: 'New chat', messages: [], created: Date.now() });
+    }
+  }
+  save(); renderList(); renderMessages();
+  (list.querySelector('.chat-item.active .chat-item-select') ?? input).focus();
+}
+$('#cancel-delete').addEventListener('click', closeDeleteDialog);
+$('#confirm-delete').addEventListener('click', () => {
+  const id = pendingDeleteId;
+  pendingDeleteId = null;
+  deleteDialog.hidden = true;
+  deleteTrigger = null;
+  if (id) deleteChat(id);
+});
+deleteDialog.addEventListener('click', (event) => {
+  if (event.target === deleteDialog) closeDeleteDialog();
+});
 function showToast(message) {
   const toast = $('#toast'); toast.textContent = message; toast.classList.add('visible');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('visible'), 2600);
@@ -137,7 +286,10 @@ $('#open-sidebar').addEventListener('click', () => $('#sidebar').classList.add('
 $('#close-sidebar').addEventListener('click', () => $('#sidebar').classList.remove('open'));
 document.addEventListener('keydown', (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); newChat(); }
-  if (event.key === 'Escape') $('#sidebar').classList.remove('open');
+  if (event.key === 'Escape') {
+    if (!deleteDialog.hidden) closeDeleteDialog();
+    $('#sidebar').classList.remove('open');
+  }
 });
 
 if (!chats.length) {
