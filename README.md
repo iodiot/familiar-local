@@ -46,7 +46,8 @@ Then open <http://127.0.0.1:8787> in a browser on the same Mac. Keep the Termina
 - Separate conversations, each with its own model context
 - Chat history saved in browser local storage
 - Light and dark themes
-- A native macOS wrapper that starts and stops the local server automatically
+- A native macOS app with its own icon, About panel, and Familiar → Quit (⌘Q) menu
+- The macOS app starts and stops the local server automatically
 
 ## Build the macOS app
 
@@ -56,7 +57,7 @@ To package the app yourself, run:
 ./scripts/package-app.sh
 ```
 
-This creates `outputs/Familiar.app` and `outputs/Familiar-macOS.zip`. To distribute a notarized app, sign it with a Developer ID certificate and notarize it with Apple.
+This creates `outputs/Familiar.app`, `outputs/Familiar-macOS.zip`, and the downloadable archive at `downloads/Familiar-macOS.zip`. To distribute a notarized app, sign it with a Developer ID certificate and notarize it with Apple.
 
 ## Privacy
 

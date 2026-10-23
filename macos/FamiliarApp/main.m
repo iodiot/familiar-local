@@ -15,8 +15,46 @@
 
 @implementation AppDelegate
 
+- (void)installApplicationMenu {
+    NSMenu *mainMenu = [[NSMenu alloc] initWithTitle:@""];
+    NSMenuItem *appMenuItem = [[NSMenuItem alloc] initWithTitle:@"Familiar" action:nil keyEquivalent:@""];
+    NSMenu *appMenu = [[NSMenu alloc] initWithTitle:@"Familiar"];
+
+    NSMenuItem *aboutItem = [[NSMenuItem alloc] initWithTitle:@"About Familiar"
+        action:@selector(showAbout:) keyEquivalent:@""];
+    aboutItem.target = self;
+    [appMenu addItem:aboutItem];
+    [appMenu addItem:[NSMenuItem separatorItem]];
+
+    NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit Familiar"
+        action:@selector(terminate:) keyEquivalent:@"q"];
+    quitItem.keyEquivalentModifierMask = NSEventModifierFlagCommand;
+    [appMenu addItem:quitItem];
+
+    appMenuItem.submenu = appMenu;
+    [mainMenu addItem:appMenuItem];
+    [NSApp setMainMenu:mainMenu];
+}
+
+- (void)showAbout:(id)sender {
+    NSBundle *appBundle = [NSBundle mainBundle];
+    NSImage *appIcon = [NSImage imageNamed:@"AppIcon"];
+    NSString *version = [appBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"1.0";
+    NSAttributedString *credits = [[NSAttributedString alloc] initWithString:@"Created by Mike Smahin\n© 2026 Familiar"];
+    [NSApp orderFrontStandardAboutPanelWithOptions:@{
+        NSAboutPanelOptionApplicationName: @"Familiar",
+        NSAboutPanelOptionApplicationVersion: version,
+        NSAboutPanelOptionApplicationIcon: appIcon,
+        NSAboutPanelOptionCredits: credits
+    }];
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    [self installApplicationMenu];
+
+    NSImage *appIcon = [NSImage imageNamed:@"AppIcon"];
+    [NSApp setApplicationIconImage:appIcon];
 
     NSRect frame = NSMakeRect(0, 0, 1120, 760);
     self.window = [[NSWindow alloc] initWithContentRect:frame

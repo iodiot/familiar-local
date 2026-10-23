@@ -28,6 +28,19 @@ cp "$SERVER_BINARY" "$APP_BUNDLE/Contents/Helpers/apple-fm-chat"
 cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/Contents/Resources/"
 cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/Contents/Helpers/"
 
+ICONSET_DIR="$ROOT_DIR/work/AppIcon.iconset"
+ICON_PNG="$ROOT_DIR/work/AppIcon.png"
+ICON_GENERATOR="$ROOT_DIR/work/generate-app-icon"
+mkdir -p "$ICONSET_DIR"
+CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-/private/tmp/familiar-clang-module-cache}" \
+  xcrun --sdk macosx clang -fobjc-arc -mmacosx-version-min=26.0 -framework Cocoa \
+  -o "$ICON_GENERATOR" "$ROOT_DIR/macos/FamiliarApp/generate-app-icon.m"
+"$ICON_GENERATOR" "$ICON_PNG"
+for size in 16 32 64 128 256 512 1024; do
+  sips -z "$size" "$size" "$ICON_PNG" --out "$ICONSET_DIR/$size.png" >/dev/null
+done
+python3 "$ROOT_DIR/macos/FamiliarApp/create-icns.py" "$ICONSET_DIR" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+
 CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-/private/tmp/familiar-clang-module-cache}" \
   xcrun --sdk macosx clang -fobjc-arc -mmacosx-version-min=26.0 \
   -framework Cocoa -framework WebKit \
@@ -35,4 +48,6 @@ CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-/private/tmp/familiar-clang-
 
 codesign --force --deep --sign - "$APP_BUNDLE"
 ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$ROOT_DIR/outputs/Familiar-macOS.zip"
+mkdir -p "$ROOT_DIR/downloads"
+cp "$ROOT_DIR/outputs/Familiar-macOS.zip" "$ROOT_DIR/downloads/Familiar-macOS.zip"
 echo "Created $APP_BUNDLE and outputs/Familiar-macOS.zip"

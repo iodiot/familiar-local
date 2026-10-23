@@ -7,6 +7,7 @@
   <key>CFBundleIdentifier</key><string>com.familiar.localchat</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>CFBundleName</key><string>Familiar</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>NSPrincipalClass</key><string>NSApplication</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
